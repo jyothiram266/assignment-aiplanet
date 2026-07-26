@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: llm-eval-pipeline-
+  namespace: default
+  labels:
+    workflow-type: model-eval
+spec:
+  entrypoint: eval-dag
+  arguments:
+    parameters:
+    - name: candidate_version
+      value: "v2.0.0"
+    - name: eval_threshold
+      value: "0.80"
+    - name: target_endpoint
+      value: "http://llm-serving-v2:8080"
+
+  templates:
+  - name: eval-dag
+    dag:
+      tasks:
+      - name: run-evaluation
+        template: eval-task
+        arguments:
+          parameters:
+          - name: candidate_version
+            value: "{{workflow.parameters.candidate_version}}"
+          - name: eval_threshold
+            value: "{{workflow.parameters.eval_threshold}}"
+          - name: target_endpoint
+            value: "{{workflow.parameters.target_endpoint}}"
+
+  - name: eval-task
+    inputs:
+      parameters:
+      - name: candidate_version
+      - name: eval_threshold
+      - name: target_endpoint
+    container:
+      image: python:3.11-slim
+      command: [sh, -c]
+      args:
+      - |
+        pip install requests
+        echo "Running Model Evaluation Suite for {{inputs.parameters.candidate_version}} against {{inputs.parameters.target_endpoint}}..."
+        python3 /eval/eval_runner.py --endpoint {{inputs.parameters.target_endpoint}} --model_version {{inputs.parameters.candidate_version}} --threshold {{inputs.parameters.eval_threshold}}
+      volumeMounts:
+      - name: eval-source
+        mountPath: /eval
+    volumes:
+    - name: eval-source
+      configMap:
+        name: llm-eval-scripts

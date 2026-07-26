@@ -1,0 +1,23 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: llm-gateway-scaler
+  namespace: default
+  labels:
+    app: llm-gateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: llm-gateway
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  cooldownPeriod: 30
+  pollingInterval: 15
+  triggers:
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+      metricName: llm_gateway_requests_total
+      query: sum(rate(llm_gateway_requests_total[1m]))
+      threshold: '10'

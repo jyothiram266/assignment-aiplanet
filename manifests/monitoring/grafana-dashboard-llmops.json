@@ -1,0 +1,98 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Gateway Request Rate (RPS by Model Version)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(llm_gateway_requests_total[1m])) by (model_version)",
+          "legendFormat": "Model {{model_version}}"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "title": "Latency Percentiles (p50 / p95 / p99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.50, sum(rate(llm_gateway_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50 Latency"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(llm_gateway_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 Latency"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(llm_gateway_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99 Latency"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "id": 3,
+      "title": "Canary Traffic Split Gauge",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "llm_gateway_canary_weight",
+          "legendFormat": "Model {{model_version}} Weight"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "id": 4,
+      "title": "Token Generation Throughput (Tokens/sec)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(llm_gateway_tokens_generated_total[1m])) by (model_version)",
+          "legendFormat": "Tokens/sec ({{model_version}})"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "id": 5,
+      "title": "Model Eval Pass-Rate Trend",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "llm_eval_pass_rate",
+          "legendFormat": "Eval Pass Rate ({{model_version}})"
+        }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["llmops", "canary", "prometheus"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "LLMOps Platform Overview Dashboard",
+  "uid": "llmops-dashboard-01"
+}

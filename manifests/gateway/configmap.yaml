@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-gateway-config
+  namespace: default
+data:
+  PRIMARY_BACKEND_URL: "http://llm-serving-v1:8080"
+  CANDIDATE_BACKEND_URL: "http://llm-serving-v2:8080"
+  CANARY_WEIGHT_PRIMARY: "90.0"
+  CANARY_WEIGHT_CANDIDATE: "10.0"
+  RATE_LIMIT_RPS: "50.0"

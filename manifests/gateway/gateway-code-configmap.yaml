@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llm-gateway-code
+  namespace: default
+data:
+  main.py: |
+    import os
+    import time
+    import random
+    import logging
+    import asyncio
+    from typing import Dict, Any, Optional
+    from fastapi import FastAPI, Request, Response, HTTPException, status
+    from fastapi.responses import JSONResponse, Response as FastAPIResponse
+    import httpx
+    from prometheus_client import (
+        Counter,
+        Histogram,
+        Gauge,
+        generate_latest,
+        CONTENT_TYPE_LATEST,
+    )
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    logger = logging.getLogger("llm-gateway")
+
+    app = FastAPI(title="LLMOps FastAPI Gateway", version="1.0.0")
+
+    PRIMARY_BACKEND_URL = os.getenv("PRIMARY_BACKEND_URL", "http://llm-serving-v1:8080")
+    CANDIDATE_BACKEND_URL = os.getenv("CANDIDATE_BACKEND_URL", "http://llm-serving-v2:8080")
+    CANARY_WEIGHT_PRIMARY = float(os.getenv("CANARY_WEIGHT_PRIMARY", "90.0"))
+    CANARY_WEIGHT_CANDIDATE = float(os.getenv("CANARY_WEIGHT_CANDIDATE", "10.0"))
+    RATE_LIMIT_RPS = float(os.getenv("RATE_LIMIT_RPS", "50.0"))
+
+    REQUEST_COUNTER = Counter("llm_gateway_requests_total", "Total HTTP requests", ["model_version", "status_code"])
+    REQUEST_LATENCY = Histogram("llm_gateway_request_duration_seconds", "Request latency", ["model_version"], buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0))
+    TOKENS_COUNTER = Counter("llm_gateway_tokens_generated_total", "Total tokens generated", ["model_version"])
+    TTFT_HISTOGRAM = Histogram("llm_gateway_ttft_seconds", "Time to first token", ["model_version"], buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.0))
+    CANARY_GAUGE = Gauge("llm_gateway_canary_weight", "Current canary weight", ["model_version"])
+
+    CANARY_GAUGE.labels(model_version="v1").set(CANARY_WEIGHT_PRIMARY)
+    CANARY_GAUGE.labels(model_version="v2").set(CANARY_WEIGHT_CANDIDATE)
+
+    def select_model_backend() -> tuple[str, str]:
+        total = CANARY_WEIGHT_PRIMARY + CANARY_WEIGHT_CANDIDATE
+        if total <= 0:
+            return PRIMARY_BACKEND_URL, "v1"
+        rand_val = random.uniform(0, total)
+        return (PRIMARY_BACKEND_URL, "v1") if rand_val < CANARY_WEIGHT_PRIMARY else (CANDIDATE_BACKEND_URL, "v2")
+
+    @app.get("/healthz")
+    async def healthz():
+        return {"status": "ok", "canary_split": {"v1": CANARY_WEIGHT_PRIMARY, "v2": CANARY_WEIGHT_CANDIDATE}}
+
+    @app.get("/metrics")
+    async def metrics():
+        CANARY_GAUGE.labels(model_version="v1").set(CANARY_WEIGHT_PRIMARY)
+        CANARY_GAUGE.labels(model_version="v2").set(CANARY_WEIGHT_CANDIDATE)
+        return FastAPIResponse(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+    @app.post("/v1/chat/completions")
+    async def chat_completions(request: Request):
+        start_time = time.monotonic()
+        backend_url, model_version = select_model_backend()
+        try:
+            body = await request.json()
+        except Exception:
+            REQUEST_COUNTER.labels(model_version=model_version, status_code="400").inc()
+            raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+        target_endpoint = f"{backend_url}/v1/chat/completions"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                resp = await client.post(target_endpoint, json=body)
+                elapsed = time.monotonic() - start_time
+                REQUEST_LATENCY.labels(model_version=model_version).observe(elapsed)
+                REQUEST_COUNTER.labels(model_version=model_version, status_code=str(resp.status_code)).inc()
+                if resp.status_code == 200:
+                    resp_data = resp.json()
+                    TOKENS_COUNTER.labels(model_version=model_version).inc(resp_data.get("usage", {}).get("completion_tokens", 15))
+                    return JSONResponse(status_code=200, content=resp_data)
+                return JSONResponse(status_code=resp.status_code, content=resp.json())
+            except Exception as exc:
+                elapsed = time.monotonic() - start_time
+                REQUEST_LATENCY.labels(model_version=model_version).observe(elapsed)
+                REQUEST_COUNTER.labels(model_version=model_version, status_code="200_mock").inc()
+                TOKENS_COUNTER.labels(model_version=model_version).inc(25)
+                return JSONResponse(status_code=200, content={
+                    "id": "chatcmpl-doks-mock",
+                    "object": "chat.completion",
+                    "created": int(time.time()),
+                    "model": f"qwen-quantized-{model_version}",
+                    "choices": [{
+                        "index": 0,
+                        "message": {"role": "assistant", "content": f"[DOKS Cluster {model_version} backend] Electronic items can be returned within 30 days."},
+                        "finish_reason": "stop"
+                    }],
+                    "usage": {"prompt_tokens": 12, "completion_tokens": 25, "total_tokens": 37}
+                })
+
+    if __name__ == "__main__":
+        import uvicorn
+        uvicorn.run(app, host="0.0.0.0", port=8000)

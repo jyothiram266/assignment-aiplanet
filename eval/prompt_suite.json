@@ -1,0 +1,122 @@
+[
+  {
+    "id": "eval-01",
+    "prompt": "What is the return policy for electronic items?",
+    "expected_keywords": ["return", "30 days", "packaging"],
+    "category": "return_policy"
+  },
+  {
+    "id": "eval-02",
+    "prompt": "How do I reset my account password?",
+    "expected_keywords": ["Forgot Password", "email", "reset link"],
+    "category": "account"
+  },
+  {
+    "id": "eval-03",
+    "prompt": "Where can I track my shipment order?",
+    "expected_keywords": ["Order History", "Track Package", "dashboard"],
+    "category": "shipping"
+  },
+  {
+    "id": "eval-04",
+    "prompt": "What payment methods do you accept?",
+    "expected_keywords": ["credit cards", "PayPal", "Visa"],
+    "category": "billing"
+  },
+  {
+    "id": "eval-05",
+    "prompt": "How can I contact customer support?",
+    "expected_keywords": ["support", "live chat", "email"],
+    "category": "support"
+  },
+  {
+    "id": "eval-06",
+    "prompt": "Can I exchange an item for a different size?",
+    "expected_keywords": ["exchange", "size", "within"],
+    "category": "return_policy"
+  },
+  {
+    "id": "eval-07",
+    "prompt": "How long does standard shipping take?",
+    "expected_keywords": ["shipping", "business days", "delivery"],
+    "category": "shipping"
+  },
+  {
+    "id": "eval-08",
+    "prompt": "Is international shipping available?",
+    "expected_keywords": ["international", "countries", "shipping"],
+    "category": "shipping"
+  },
+  {
+    "id": "eval-09",
+    "prompt": "What should I do if my package arrives damaged?",
+    "expected_keywords": ["damaged", "photo", "support"],
+    "category": "support"
+  },
+  {
+    "id": "eval-10",
+    "prompt": "How do I update my billing address?",
+    "expected_keywords": ["account", "billing", "settings"],
+    "category": "account"
+  },
+  {
+    "id": "eval-11",
+    "prompt": "Do you offer gift cards?",
+    "expected_keywords": ["gift card", "digital", "purchase"],
+    "category": "billing"
+  },
+  {
+    "id": "eval-12",
+    "prompt": "How do I cancel my order before it ships?",
+    "expected_keywords": ["cancel", "order", "status"],
+    "category": "orders"
+  },
+  {
+    "id": "eval-13",
+    "prompt": "Are taxes included in the total price?",
+    "expected_keywords": ["tax", "checkout", "total"],
+    "category": "billing"
+  },
+  {
+    "id": "eval-14",
+    "prompt": "What are your business operating hours?",
+    "expected_keywords": ["hours", "support", "available"],
+    "category": "support"
+  },
+  {
+    "id": "eval-15",
+    "prompt": "How do I delete my user account?",
+    "expected_keywords": ["delete", "account", "privacy"],
+    "category": "account"
+  },
+  {
+    "id": "eval-16",
+    "prompt": "What is the warranty period on hardware products?",
+    "expected_keywords": ["warranty", "year", "coverage"],
+    "category": "hardware"
+  },
+  {
+    "id": "eval-17",
+    "prompt": "Can I change the delivery address after ordering?",
+    "expected_keywords": ["address", "change", "contact"],
+    "category": "shipping"
+  },
+  {
+    "id": "eval-18",
+    "prompt": "Do you offer discounts for bulk orders?",
+    "expected_keywords": ["bulk", "discount", "quantity"],
+    "category": "sales"
+  },
+  {
+    "id": "eval-19",
+    "prompt": "How do I download my invoice PDF?",
+    "expected_keywords": ["invoice", "download", "order"],
+    "category": "billing"
+  },
+  {
+    "id": "eval-20",
+    "prompt": "Is my credit card information secure on your website?",
+    "expected_keywords": ["secure", "encryption", "SSL"],
+    "category": "security"
+  }
+]

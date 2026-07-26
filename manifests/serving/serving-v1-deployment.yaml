@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-serving-v1
+  namespace: default
+  labels:
+    app: llm-serving-v1
+    version: v1.0.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-serving-v1
+  template:
+    metadata:
+      labels:
+        app: llm-serving-v1
+        version: v1.0.0
+    spec:
+      containers:
+      - name: llama-cpp-server
+        image: python:3.11-slim
+        command:
+        - /bin/sh
+        - -c
+        - |
+          pip install --no-cache-dir fastapi uvicorn pydantic
+          python /app/server.py
+        env:
+        - name: MODEL_VERSION
+          value: "v1.0.0"
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1024Mi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+      volumes:
+      - name: code-volume
+        configMap:
+          name: llm-serving-code

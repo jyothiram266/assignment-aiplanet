@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-gateway
+  namespace: default
+  labels:
+    app: llm-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llm-gateway
+  template:
+    metadata:
+      labels:
+        app: llm-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: gateway
+        image: python:3.11-slim
+        command:
+        - /bin/sh
+        - -c
+        - |
+          pip install --no-cache-dir fastapi uvicorn httpx prometheus-client pydantic
+          python /app/main.py
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: PRIMARY_BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: llm-gateway-config
+              key: PRIMARY_BACKEND_URL
+        - name: CANDIDATE_BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: llm-gateway-config
+              key: CANDIDATE_BACKEND_URL
+        - name: CANARY_WEIGHT_PRIMARY
+          valueFrom:
+            configMapKeyRef:
+              name: llm-gateway-config
+              key: CANARY_WEIGHT_PRIMARY
+        - name: CANARY_WEIGHT_CANDIDATE
+          valueFrom:
+            configMapKeyRef:
+              name: llm-gateway-config
+              key: CANARY_WEIGHT_CANDIDATE
+        volumeMounts:
+        - name: code-volume
+          mountPath: /app
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 20
+          periodSeconds: 10
+      volumes:
+      - name: code-volume
+        configMap:
+          name: llm-gateway-code
